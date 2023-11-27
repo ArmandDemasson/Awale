@@ -10,16 +10,22 @@
 #elif defined (linux)
 
 typedef struct {
-    int * board;
+    int ** board;
     Client * players;
-    int * points;
+    int * scores;
     int turn;
     int state;
 } Game;
 
 extern Game init_game(Client * players);
 extern char * start_turn(Game game);
-char * print_board(int * board);
+int isPossiblePlay(Game game, int selectedHole);
+int willStarve(Game game);
+char * print_board(int ** board);
+int emptyRow(int seeds);
+int harvest(Game game, int selectedHole);
+extern int play(Game game, int selectedHole);
+
 
 #endif
 
