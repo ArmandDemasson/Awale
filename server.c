@@ -99,7 +99,7 @@ while(1)
       printf("%d joueurs sont connectés\n",actual);
       fflush(stdout);
       send_message_to_all_clients(clients,c,actual,buffer,1);
-      if(actual == 2) {
+      if(actual == 3) {
          game = init_game(clients);
          strncpy(buffer,start_turn(game),BUF_SIZE);
          for(int i = 0 ; i < actual; i++){
@@ -117,47 +117,84 @@ while(1)
 
 
          /* a client is talking */
-         if(FD_ISSET(clients[i].sock, &rdfs))
-            {
-               if(clients[i].name == game.players[game.turn].name){
-
-               int c = read_client(clients[i].sock, buffer);
+         // if(FD_ISSET(clients[i].sock, &rdfs))
+         //    {
+         //       int c = read_client(clients[i].sock, buffer);
                
 
-                  /* client disconnected */
-                  if(c == 0)
-                  {
-                     closesocket(clients[i].sock);
-                     remove_client(clients, i, &actual);
-                     strncpy(buffer, clients[i].name, BUF_SIZE - 1);
-                     strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                     send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
-                  }
-                  else
-                  {
-                     send_message_to_all_clients(clients, clients[i], actual, buffer, 0);
-                  }
-                  int selectedHole = atoi(buffer);
+         //          /* client disconnected */
+         //          if(c == 0)
+         //          {
+         //             closesocket(clients[i].sock);
+         //             remove_client(clients, i, &actual);
+         //             strncpy(buffer, clients[i].name, BUF_SIZE - 1);
+         //             strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
+         //             send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
+         //          } else if (strncmp(buffer, "play", strlen("play")) == 0) {
+         //             // Le client a envoyé une demande de défi
+         //             char* spacePos = strchr(buffer, ' ');
+         //             if (spacePos != NULL) {
+         //                char challengedClientName[BUF_SIZE];
+         //                snprintf(challengedClientName, BUF_SIZE, "%s", spacePos + 1);
 
-                     if(play(game, selectedHole) == 0) {
-                        printf("choisir un puit valide\n");
-                        fflush(stdout);
-                     } else {
-                        if(game.turn == 0){
-                           game.turn = 1;
-                        } else {
-                           game.turn = 0;
-                        }
+         //                // Vérifie si le client défié existe
+         //                int challengedClientIndex = find_client_index_by_name(clients, actual, challengedClientName);
+         //                if (challengedClientIndex != -1) {
+         //                   // Envoyer la demande de défi au client défié
+         //                   char challengeMsg[BUF_SIZE];
+         //                   snprintf(challengeMsg, BUF_SIZE, "%s vous a défié pour une partie. Acceptez-vous ? [Y/n]\n", clients[i].name);
+         //                   write_client(clients[challengedClientIndex].sock, challengeMsg);
 
-                        strncpy(buffer,start_turn(game),BUF_SIZE);
-                        for(int i = 0 ; i < actual; i++){
-                           send_message_to_all_clients(clients,clients[i],actual,buffer,1);
-                        }
-                     }
-               }
+         //                   // Attente de la réponse du client défié
+         //                   char response[BUF_SIZE];
+         //                   if (read_client(clients[challengedClientIndex].sock, response) == -1){   
 
-            break;
-            }
+         //                   if (strncasecmp(response, "y", strlen("y")) == 0) {
+         //                      game = init_game(clients);
+         //                      strncpy(buffer,start_turn(game),BUF_SIZE);
+         //                      for(int i = 0 ; i < actual; i++){
+         //                         send_message_to_all_clients(clients,clients[i],actual,buffer,1);
+         //                      }
+         //                   } else if (strncasecmp(response, "n", strlen("n")) == 0) {
+         //                      char declineMsg[BUF_SIZE];
+         //                      snprintf(declineMsg, BUF_SIZE, "%s refuse le défi\n", clients[challengedClientIndex].name);
+         //                      write_client(clients[i].sock, declineMsg);
+         //                   }
+         //                   }
+         //                } else {
+         //                   char notPlayerMsg[BUF_SIZE];
+         //                   snprintf(notPlayerMsg, BUF_SIZE, "Ce joueur n'existe pas.\n");
+         //                   write_client(clients[i].sock, notPlayerMsg);
+         //                }
+         //             }
+         //          } 
+         //          else if(clients[i].name == game.players[game.turn].name){
+         //             int selectedHole = atoi(buffer);
+
+         //                if(play(game, selectedHole) == 0) {
+         //                   printf("choisir un puit valide\n");
+         //                   fflush(stdout);
+         //                } else {
+         //                   if(game.turn == 0){
+         //                      game.turn = 1;
+         //                   } else {
+         //                      game.turn = 0;
+         //                   }
+
+         //                   strncpy(buffer,start_turn(game),BUF_SIZE);
+         //                   for(int i = 0 ; i < actual; i++){
+         //                      send_message_to_all_clients(clients,clients[i],actual,buffer,1);
+         //                   }
+         //                }
+         //          }
+         //          else
+         //          {
+         //             send_message_to_all_clients(clients, clients[i], actual, buffer, 0);
+         //          }
+               
+
+         //    break;
+         //    }
       }
    }
 }
@@ -263,6 +300,16 @@ if(send(sock, buffer, strlen(buffer), 0) < 0)
    perror("send()");
    exit(errno);
 }
+}
+
+int find_client_index_by_name(Client *clients, int actual, const char *name) {
+    int i;
+    for (i = 0; i < actual; i++) {
+        if (strcmp(clients[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 int main(int argc, char **argv)

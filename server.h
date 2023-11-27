@@ -28,7 +28,7 @@ typedef struct in_addr IN_ADDR;
 #endif
 
 #define CRLF        "\r\n"
-#define PORT         1979
+#define PORT         1978
 #define MAX_CLIENTS     100
 
 #define BUF_SIZE    1024
@@ -45,6 +45,7 @@ static void init(void);
 static void end(void);
 static void server_app(void);
 static int init_server_connection(void);
+int find_client_index_by_name(Client *clients, int actual, const char *name);
 static void end_connection(int sock);
 static int read_client(SOCKET sock, char *buffer);
 static void write_client(SOCKET sock, const char *buffer);
