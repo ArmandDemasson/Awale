@@ -5,7 +5,7 @@
 #include <string.h>
 
 
-Game init_game(Client * players){
+Game init_game(char ** players){
 
     int **initial_board = (int **)malloc(2 * sizeof(int *));
     for (int i = 0; i < 2; i++) {
@@ -45,9 +45,9 @@ char * start_turn(Game game){
     char * turn_logs = (char *)malloc(1024);
 
     sprintf(turn_logs,"Les scores actuels sont :\n");
-    sprintf(turn_logs + strlen(turn_logs),"Joueur1 - %s : %d scores\n", game.players[0].name,game.scores[0]);
-    sprintf(turn_logs + strlen(turn_logs),"Joueur2 - %s : %d scores\n", game.players[1].name,game.scores[1]);
-    sprintf(turn_logs + strlen(turn_logs),"C'est le tour de %s\n\n",game.players[game.turn].name);
+    sprintf(turn_logs + strlen(turn_logs),"Joueur1 - %s : %d scores\n", game.players[0],game.scores[0]);
+    sprintf(turn_logs + strlen(turn_logs),"Joueur2 - %s : %d scores\n", game.players[1],game.scores[1]);
+    sprintf(turn_logs + strlen(turn_logs),"C'est le tour de %s\n\n",game.players[game.turn]);
     char * printed_board = print_board(game.board);
     strncat(turn_logs,printed_board,1024);
 
