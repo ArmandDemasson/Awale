@@ -85,18 +85,6 @@ static void server_app(void)
             /* disconnected */
             continue;
          }
-         if (strcmp(buffer, "/list") == 0)
-         {
-            // Client requested the list of connected clients
-            char list_buffer[BUF_SIZE];
-            list_buffer[0] = 0;
-            for (int i = 0; i < actual; i++)
-            {
-               strncat(list_buffer, clients[i].name, sizeof(list_buffer) - strlen(list_buffer) - 1);
-               strncat(list_buffer, "\n", sizeof(list_buffer) - strlen(list_buffer) - 1);
-            }
-            write_client(csock, list_buffer);
-         }
          else
          {
 
@@ -109,24 +97,25 @@ static void server_app(void)
             strncpy(c.name, buffer, BUF_SIZE - 1);
             clients[actual] = c;
             actual++;
-            strncat(buffer, " vient de se connecter", strlen(buffer) + strlen(" vient de se connecter"));
+            strncat(buffer, " vient de se connecter\n", sizeof(buffer) + strlen(buffer) -1);
             printf("%d joueurs sont connectés\n", actual);
             fflush(stdout);
             send_message_to_all_clients(clients, c, actual, buffer, 1);
-            if (actual == 2)
-            {
-               game = init_game(clients);
-               strncpy(buffer, start_turn(game), BUF_SIZE);
-               for (int i = 0; i < actual; i++)
-               {
-                  send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
-               }
-            }
+            // if (actual == 2)
+            // {
+            //    game = init_game(clients);
+            //    strncpy(buffer, start_turn(game), BUF_SIZE);
+            //    for (int i = 0; i < actual; i++)
+            //    {
+            //       send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
+            //    }
+            // }
          }
       }
       else
       {
          int i = 0;
+         strcpy(buffer,"");
          for (i = 0; i < actual; i++)
          {
             Client client = clients[i];
@@ -134,52 +123,59 @@ static void server_app(void)
             /* a client is talking */
             if (FD_ISSET(clients[i].sock, &rdfs))
             {
-               if (clients[i].name == game.players[game.turn].name)
+               // if (clients[i].name == game.players[game.turn].name)
+               // {
+
+               int c = read_client(clients[i].sock, buffer);
+
+               printf("%s", buffer);
+               /* client disconnected */
+               if (c == 0)
                {
-
-                  int c = read_client(clients[i].sock, buffer);
-
-                  /* client disconnected */
-                  if (c == 0)
+                  closesocket(clients[i].sock);
+                  remove_client(clients, i, &actual);
+                  strncpy(buffer, clients[i].name, BUF_SIZE - 1);
+                  strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
+                  send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
+               }
+               else
+               {
+                  printf("%s", buffer);
+                  fflush(stdout);
+                  if (strcmp(buffer, "list") == 0)
                   {
-                     closesocket(clients[i].sock);
-                     remove_client(clients, i, &actual);
-                     strncpy(buffer, clients[i].name, BUF_SIZE - 1);
-                     strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                     send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
-                  }
-                  else
-                  {
+                     display_list_clients(actual,clients, clients[i]);
+                  } else {
                      send_message_to_all_clients(clients, clients[i], actual, buffer, 0);
                   }
-                  int selectedHole = atoi(buffer);
-
-                  if (play(game, selectedHole) == 0)
-                  {
-                     printf("choisir un puit valide\n");
-                     fflush(stdout);
-                  }
-                  else
-                  {
-                     if (game.turn == 0)
-                     {
-                        game.turn = 1;
-                     }
-                     else
-                     {
-                        game.turn = 0;
-                     }
-
-                     strncpy(buffer, start_turn(game), BUF_SIZE);
-                     for (int i = 0; i < actual; i++)
-                     {
-                        send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
-                     }
-                  }
                }
+               // int selectedHole = atoi(buffer);
 
-               break;
+               // if (play(game, selectedHole) == 0)
+               // {
+               //    printf("choisir un puit valide\n");
+               //    fflush(stdout);
+               // }
+               // else
+               // {
+               //    if (game.turn == 0)
+               //    {
+               //       game.turn = 1;
+               //    }
+               //    else
+               //    {
+               //       game.turn = 0;
+               //    }
+
+               //    strncpy(buffer, start_turn(game), BUF_SIZE);
+               //    for (int i = 0; i < actual; i++)
+               //    {
+               //       send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
+               //    }
+               // }
             }
+
+            break;
          }
       }
    }
@@ -221,8 +217,11 @@ static void send_message_to_all_clients(Client *clients, Client sender, int actu
             strncat(message, " : ", sizeof message - strlen(message) - 1);
          }
          strncat(message, buffer, sizeof message - strlen(message) - 1);
+         printf("%s\n",message);
+         fflush(stdout);
          write_client(clients[i].sock, message);
       }
+      strcpy(message,"");
    }
 }
 
@@ -284,6 +283,20 @@ static void write_client(SOCKET sock, const char *buffer)
       perror("send()");
       exit(errno);
    }
+}
+
+static void display_list_clients(int actual, Client *clients, Client client)
+{
+   char list_buffer[BUF_SIZE];
+   list_buffer[0] = 0;
+   strncat(list_buffer, "Joueurs connectés :\n",sizeof(list_buffer) - strlen(list_buffer) - 1);
+   int i;
+   for (i = 0; i < actual; i++)
+   {
+      strncat(list_buffer, clients[i].name, sizeof(list_buffer) - strlen(list_buffer) - 1);
+      strncat(list_buffer, "\n", sizeof(list_buffer) - strlen(list_buffer) - 1);
+   }
+   write_client(client.sock, list_buffer);
 }
 
 int main(int argc, char **argv)
