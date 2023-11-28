@@ -1,6 +1,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include "game.h"
+
 #ifdef WIN32
 
 #include <winsock2.h>
@@ -30,6 +32,7 @@ typedef struct in_addr IN_ADDR;
 #define CRLF        "\r\n"
 #define PORT         1978
 #define MAX_CLIENTS     100
+#define MAX_GAMES 100
 
 #define BUF_SIZE    1024
 
@@ -37,9 +40,18 @@ typedef struct
 {
    SOCKET sock;
    char name[BUF_SIZE];
+   int isInGame;
+   int actualGame;
 }Client;
 
-#include "game.h"
+typedef struct
+{
+    int max_clients;
+    int max_games;
+    int actual_clients;
+    int actual_games;
+} Server;
+
 
 static void init(void);
 static void end(void);
@@ -52,6 +64,11 @@ static void write_client(SOCKET sock, const char *buffer);
 static void send_message_to_all_clients(Client *clients, Client client, int actual, const char *buffer, char from_server);
 static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
+void challenge_client(char * buffer, Client * clients, int actual, int i, Server * server, Game * games);
+static void display_list_clients(int actual, Client *clients, Client client);
+int play_turn(char *buffer, Game * game);
+char* findWinner(Game game);
+void display_list_games(Game *games, int actual_games, Client *clients, Client client, int actual_clients, char *buffer);
 
 
 
