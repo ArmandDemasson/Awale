@@ -106,9 +106,9 @@ static void server_app(void)
             clients[actual] = c;
             actual++;
             strncat(buffer, " vient de se connecter\n", sizeof(buffer) + strlen(buffer) - 1);
-            printf("%d joueurs sont connectés\n", actual);
-            fflush(stdout);
             send_message_to_all_clients(clients, c, actual, buffer, 1);
+            strcpy(buffer, "Vous pouvez entrer :\nlist : pour afficher la liste des joueurs connectés\nplay <nom_du_joueur> : pour défier un joueur");
+            write_client(clients[actual - 1].sock, buffer);
          }
       }
       else
@@ -134,16 +134,24 @@ static void server_app(void)
                }
                else if (clients[i].isInGame == 1)
                {
-                  Game game = games[clients[i].actualGame];
-                  if (clients[i].name == game.players[game.turn])
+                  Game * game = &games[clients[i].actualGame];
+                  if(strcmp(clients[i].name,game->players[game->turn]) == 0)
                   {
-                     play_turn(buffer, game); 
-                     strncpy(buffer, start_turn(game), BUF_SIZE);
-                     for (int i = 0; i < 2; i++)
-                     {
-                        int client_idx = find_client_index_by_name(clients,actual,game.players[i]);
-                        write_client(clients[client_idx].sock,buffer);
+                     if(play_turn(buffer, game) != 0){
+
+                     strncpy(buffer, start_turn(*game), BUF_SIZE);
+                        for (int i = 0; i < 2; i++)
+                        {
+                           int client_idx = find_client_index_by_name(clients, actual, game->players[i]);
+                           write_client(clients[client_idx].sock, buffer);
+                        }
+                     } else {
+                        strcpy(buffer, "Coup invalide !\n");
+                        write_client(clients[i].sock,buffer);
                      }
+                  } else {
+                     strcpy(buffer,"Pas ton tour");
+                     write_client(clients[i].sock, buffer);
                   }
                }
                else
@@ -155,6 +163,8 @@ static void server_app(void)
                   else if (strncmp(buffer, "play", strlen("play")) == 0)
                   {
                      challenge_client(buffer, clients, actual, i, &server, games);
+                  } else if(strcmp(buffer, "games") == 0){
+                     display_list_games(games, server.actual_games, clients, clients[i], server.actual_clients, buffer);
                   }
                }
             }
@@ -328,9 +338,10 @@ void challenge_client(char *buffer, Client *clients, int actual, int i, Server *
                }
                strncpy(buffer, start_turn(game), BUF_SIZE);
 
-               for (int i = 0; i < actual; i++)
+               for (int i = 0; i < 2; i++)
                {
-                  send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
+                  int client_idx = find_client_index_by_name(clients, actual, game.players[i]);
+                  write_client(clients[client_idx].sock, buffer);
                }
             }
             else if (strncasecmp(response, "n", strlen("n")) == 0)
@@ -367,27 +378,48 @@ static void display_list_clients(int actual, Client *clients, Client client)
    write_client(client.sock, list_buffer);
 }
 
-void play_turn(char *buffer, Game game)
+void display_list_games(Game *games, int actual_games, Client *clients, Client client, int actual_clients, char *buffer)
+{
+   strcpy(buffer, "Liste des parties en cours :\n");
+
+   for (int i = 0; i < actual_games; i++)
+   {
+      Game game = games[i];
+
+      sprintf(buffer + strlen(buffer),
+              "Partie %d: %s vs %s - Points: %d vs %d - Statut: %s\n",
+              i + 1,
+              game.players[0],
+              game.players[1],
+              game.scores[0],
+              game.scores[1],
+              game.state ? "En cours" : "Terminé");
+   }
+   write_client(client.sock,buffer);
+}
+
+int play_turn(char *buffer, Game  * game)
 {
    int selectedHole = atoi(buffer);
 
-   if (play(game, selectedHole) == 0)
+   if (play(*game, selectedHole) == 0)
    {
       printf("choisir un puit valide\n");
       fflush(stdout);
+      return 0;
    }
    else
    {
-      if (game.turn == 0)
+      if (game->turn == 0)
       {
-         game.turn = 1;
+         game->turn = 1;
       }
       else
       {
-         game.turn = 0;
+         game->turn = 0;
       }
    }
-
+   return 1;
 }
 
 int main(int argc, char **argv)

@@ -14,11 +14,10 @@ Game init_game(char ** players){
 
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 6; j++) {
-            initial_board[i][j] = 0;
+            initial_board[i][j] = 4;
         }
     }
 
-    initial_board[0][5] = 2;
 
 
     int * initial_scores = malloc(2 * sizeof(int));

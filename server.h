@@ -66,7 +66,8 @@ static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
 void challenge_client(char * buffer, Client * clients, int actual, int i, Server * server, Game * games);
 static void display_list_clients(int actual, Client *clients, Client client);
-void play_turn(char *buffer, Game game);
+int play_turn(char *buffer, Game * game);
+void display_list_games(Game *games, int actual_games, Client *clients, Client client, int actual_clients, char *buffer);
 
 
 
