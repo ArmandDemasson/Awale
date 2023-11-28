@@ -107,7 +107,7 @@ static void server_app(void)
             actual++;
             strncat(buffer, " vient de se connecter\n", sizeof(buffer) + strlen(buffer) - 1);
             send_message_to_all_clients(clients, c, actual, buffer, 1);
-            strcpy(buffer, "Vous pouvez entrer :\nlist : pour afficher la liste des joueurs connectés\nplay <nom_du_joueur> : pour défier un joueur");
+            strcpy(buffer, "Vous pouvez entrer :\nlist : pour afficher la liste des joueurs connectés\nplay <nom_du_joueur> : pour défier un joueur\ngames : pour afficher la liste des parties");
             write_client(clients[actual - 1].sock, buffer);
          }
       }
