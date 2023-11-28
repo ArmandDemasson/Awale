@@ -97,7 +97,7 @@ static void server_app(void)
             strncpy(c.name, buffer, BUF_SIZE - 1);
             clients[actual] = c;
             actual++;
-            strncat(buffer, " vient de se connecter\n", sizeof(buffer) + strlen(buffer) -1);
+            strncat(buffer, " vient de se connecter\n", sizeof(buffer) + strlen(buffer) - 1);
             printf("%d joueurs sont connectés\n", actual);
             fflush(stdout);
             send_message_to_all_clients(clients, c, actual, buffer, 1);
@@ -115,7 +115,7 @@ static void server_app(void)
       else
       {
          int i = 0;
-         strcpy(buffer,"");
+         strcpy(buffer, "");
          for (i = 0; i < actual; i++)
          {
             Client client = clients[i];
@@ -138,16 +138,13 @@ static void server_app(void)
                   strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
                   send_message_to_all_clients(clients, clients[i], actual, buffer, 1);
                }
+               else if (strcmp(buffer, "list") == 0)
+               {
+                  display_list_clients(actual, clients, clients[i]);
+               }
                else
                {
-                  printf("%s", buffer);
-                  fflush(stdout);
-                  if (strcmp(buffer, "list") == 0)
-                  {
-                     display_list_clients(actual,clients, clients[i]);
-                  } else {
-                     send_message_to_all_clients(clients, clients[i], actual, buffer, 0);
-                  }
+                  send_message_to_all_clients(clients, clients[i], actual, buffer, 0);
                }
                // int selectedHole = atoi(buffer);
 
@@ -217,11 +214,11 @@ static void send_message_to_all_clients(Client *clients, Client sender, int actu
             strncat(message, " : ", sizeof message - strlen(message) - 1);
          }
          strncat(message, buffer, sizeof message - strlen(message) - 1);
-         printf("%s\n",message);
+         printf("%s\n", message);
          fflush(stdout);
          write_client(clients[i].sock, message);
       }
-      strcpy(message,"");
+      strcpy(message, "");
    }
 }
 
@@ -289,7 +286,7 @@ static void display_list_clients(int actual, Client *clients, Client client)
 {
    char list_buffer[BUF_SIZE];
    list_buffer[0] = 0;
-   strncat(list_buffer, "Joueurs connectés :\n",sizeof(list_buffer) - strlen(list_buffer) - 1);
+   strncat(list_buffer, "Joueurs connectés :\n", sizeof(list_buffer) - strlen(list_buffer) - 1);
    int i;
    for (i = 0; i < actual; i++)
    {
