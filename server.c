@@ -35,7 +35,7 @@ static void server_app(void)
    int max = sock;
    /* an array for all clients */
    Client clients[MAX_CLIENTS];
-   Game games[MAX_GAMES];
+   Game * games[MAX_GAMES];
    fd_set rdfs;
 
    Server server;
@@ -105,9 +105,7 @@ static void server_app(void)
             strncpy(c.name, buffer, BUF_SIZE - 1);
             clients[actual] = c;
             actual++;
-            strncat(buffer, " vient de se connecter\n", sizeof(buffer) + strlen(buffer) - 1);
-            send_message_to_all_clients(clients, c, actual, buffer, 1);
-            strcpy(buffer, "Vous pouvez entrer :\nlist : pour afficher la liste des joueurs connectés\nplay <nom_du_joueur> : pour défier un joueur\ngames : pour afficher la liste des parties");
+            strcpy(buffer, "Vous pouvez entrer :\nlist : pour afficher la liste des joueurs connectés\nchat <nom_du_joueur>: pour discuter avec un joueur connecté\nplay <nom_du_joueur> : pour défier un joueur\ngames : pour afficher la liste des parties");
             write_client(clients[actual - 1].sock, buffer);
          }
       }
@@ -134,23 +132,28 @@ static void server_app(void)
                }
                else if (clients[i].isInGame == 1)
                {
-                  Game * game = &games[clients[i].actualGame];
-                  if(strcmp(clients[i].name,game->players[game->turn]) == 0)
+                  Game * game = games[clients[i].actualGame];
+                  if (strcmp(clients[i].name, game->players[game->turn]) == 0)
                   {
-                     if(play_turn(buffer, game) != 0){
+                     if (play_turn(buffer, game) != 0)
+                     {
 
-                     strncpy(buffer, start_turn(*game), BUF_SIZE);
+                        strncpy(buffer, start_turn(*game), BUF_SIZE);
                         for (int i = 0; i < 2; i++)
                         {
                            int client_idx = find_client_index_by_name(clients, actual, game->players[i]);
                            write_client(clients[client_idx].sock, buffer);
                         }
-                     } else {
-                        strcpy(buffer, "Coup invalide !\n");
-                        write_client(clients[i].sock,buffer);
                      }
-                  } else {
-                     strcpy(buffer,"Pas ton tour\n");
+                     else
+                     {
+                        strcpy(buffer, "Coup invalide !\n");
+                        write_client(clients[i].sock, buffer);
+                     }
+                  }
+                  else
+                  {
+                     strcpy(buffer, "Pas ton tour\n");
                      write_client(clients[i].sock, buffer);
                   }
                }
@@ -163,8 +166,14 @@ static void server_app(void)
                   else if (strncmp(buffer, "play", strlen("play")) == 0)
                   {
                      challenge_client(buffer, clients, actual, i, &server, games);
-                  } else if(strcmp(buffer, "games") == 0){
-                     display_list_games(games, server.actual_games, clients, clients[i], server.actual_clients, buffer);
+                  }
+                  else if (strcmp(buffer, "games") == 0)
+                  {
+                     display_list_games(games, server.actual_games, clients, clients[i], server.actual_clients);
+                  }
+                  else if (strncmp(buffer, "chat", strlen("chat")) == 0)
+                  {
+                     // chat_with_client(buffer,clients,actual, clients[i]);
                   }
                }
             }
@@ -290,7 +299,7 @@ int find_client_index_by_name(Client *clients, int actual, const char *name)
    return -1;
 }
 
-void challenge_client(char *buffer, Client *clients, int actual, int i, Server *server, Game *games)
+void challenge_client(char *buffer, Client *clients, int actual, int i, Server *server, Game ** games)
 {
    // Le client a envoyé une demande de défi
    Game game;
@@ -304,10 +313,17 @@ void challenge_client(char *buffer, Client *clients, int actual, int i, Server *
       int challengedClientIndex = find_client_index_by_name(clients, actual, challengedClientName);
       if (challengedClientIndex != -1)
       {
-         // Envoyer la demande de défi au client défié
          char challengeMsg[BUF_SIZE];
-         strcpy(challengeMsg, clients[i].name);
-         snprintf(challengeMsg, BUF_SIZE, " vous a défié pour une partie. Acceptez-vous ? [Y/n]\n");
+         if (clients[challengedClientIndex].isInGame == 1)
+         {
+            strcpy(challengeMsg, clients[challengedClientIndex].name);
+            strcat(challengeMsg, " est déjà en partie\n");
+            write_client(clients[i].sock, challengeMsg);
+            return;
+         }
+         strncpy(challengeMsg, clients[i].name, sizeof(challengeMsg));
+         // Envoyer la demande de défi au client défié
+         strcat(challengeMsg, " vous a défié pour une partie. Acceptez-vous ? [Y/n]\n");
 
          write_client(clients[challengedClientIndex].sock, challengeMsg);
 
@@ -325,11 +341,13 @@ void challenge_client(char *buffer, Client *clients, int actual, int i, Server *
                game = init_game(players);
                if (server->actual_games < MAX_GAMES)
                {
-                  games[server->actual_games] = game;
+                  int gameIndex = server->actual_games;
+                  games[gameIndex] = (Game *) malloc(sizeof(Game));
+                  games[gameIndex] = &game;
                   clients[i].isInGame = 1;
                   clients[challengedClientIndex].isInGame = 1;
-                  clients[i].actualGame = server->actual_games;
-                  clients[challengedClientIndex].actualGame = server->actual_games;
+                  clients[i].actualGame = gameIndex;
+                  clients[challengedClientIndex].actualGame = gameIndex;
                   server->actual_games++;
                }
                else
@@ -364,6 +382,30 @@ void challenge_client(char *buffer, Client *clients, int actual, int i, Server *
    }
 }
 
+// void chat_with_client(char * buffer, Client * clients, int actual, Client client){
+//    char *spacePos = strchr(buffer, ' ');
+//    if (spacePos != NULL){
+//       char requestedClientName[BUF_SIZE];
+//       snprintf(requestedClientName, BUF_SIZE, "%s", spacePos+1);
+
+//       int requestedClientName_idx = find_client_index_by_name(clients,actual,requestedClientName);
+//       if (requestedClientName_idx != -1)
+//       {
+//          char requestMsg[BUF_SIZE];
+//          strcpy(requestMsg, client.name);
+//          snprintf(requestMsg, BUF_SIZE, " souhaite parler. Acceptez vous ? [Y/n]\n");
+//          write_client(clients[requestedClientName_idx].sock,requestMsg);
+
+//          char response[BUF_SIZE];
+
+//          if (read_client(clients[requestedClientName_idx].sock, response) != -1)
+//          {
+
+//             if (strncasecmp(response, "y", strlen("y")) == 0)
+//             {
+//       }
+//    }
+// }
 static void display_list_clients(int actual, Client *clients, Client client)
 {
    char list_buffer[BUF_SIZE];
@@ -378,27 +420,23 @@ static void display_list_clients(int actual, Client *clients, Client client)
    write_client(client.sock, list_buffer);
 }
 
-void display_list_games(Game *games, int actual_games, Client *clients, Client client, int actual_clients, char *buffer)
+void display_list_games(Game **games, int actual_games, Client *clients, Client client, int actual_clients)
 {
+   char buffer[BUF_SIZE];
    strcpy(buffer, "Liste des parties en cours :\n");
-
+   write_client(client.sock, buffer);
    for (int i = 0; i < actual_games; i++)
    {
-      Game game = games[i];
-
-      sprintf(buffer + strlen(buffer),
-              "Partie %d: %s vs %s - Points: %d vs %d - Statut: %s\n",
-              i + 1,
-              game.players[0],
-              game.players[1],
-              game.scores[0],
-              game.scores[1],
-              game.state ? "En cours" : "Terminé");
+      Game * game = games[i];
+      char gameInfo[BUF_SIZE];
+      sprintf(gameInfo, "Partie %d: %s vs %s - Points: %d vs %d - Statut: %s\n",
+              i + 1, game->players[0], game->players[1], game->scores[0], game->scores[1],
+              game->state ? "En cours" : "Terminé");
+      write_client(client.sock, gameInfo);
    }
-   write_client(client.sock,buffer);
 }
 
-int play_turn(char *buffer, Game  * game)
+int play_turn(char *buffer, Game *game)
 {
    int selectedHole = atoi(buffer);
 

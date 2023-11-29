@@ -64,10 +64,10 @@ static void write_client(SOCKET sock, const char *buffer);
 static void send_message_to_all_clients(Client *clients, Client client, int actual, const char *buffer, char from_server);
 static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
-void challenge_client(char * buffer, Client * clients, int actual, int i, Server * server, Game * games);
+void challenge_client(char * buffer, Client * clients, int actual, int i, Server * server, Game ** games);
 static void display_list_clients(int actual, Client *clients, Client client);
 int play_turn(char *buffer, Game * game);
-void display_list_games(Game *games, int actual_games, Client *clients, Client client, int actual_clients, char *buffer);
+void display_list_games(Game **games, int actual_games, Client *clients, Client client, int actual_clients);
 
 
 
