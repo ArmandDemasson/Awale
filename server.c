@@ -135,20 +135,42 @@ static void server_app(void)
                else if (clients[i].isInGame == 1)
                {
                   Game * game = &games[clients[i].actualGame];
-                  if(strcmp(clients[i].name,game->players[game->turn]) == 0)
+                  if (strcasecmp(clients[i].name, game->players[game->turn]) == 0)
                   {
-                     if(play_turn(buffer, game) != 0){
+                     int resultTurn = play_turn(buffer, game);
+                     printf("%d %d de tour lalala\n", game->turn, i);
+                     fflush(stdout);
+                     printf("%d resultTurn\n", resultTurn);
+                     fflush(stdout);
+                     if(resultTurn == 1){; 
 
-                     strncpy(buffer, start_turn(*game), BUF_SIZE);
+                        printf("%d de tour esshhhs\n", game->turn);
+                        fflush(stdout);
+
+                        strncpy(buffer, start_turn(*game), BUF_SIZE);
                         for (int i = 0; i < 2; i++)
                         {
-                           int client_idx = find_client_index_by_name(clients, actual, game->players[i]);
-                           write_client(clients[client_idx].sock, buffer);
+                           int client_idx = find_client_index_by_name(clients,actual,game->players[i]);
+                           write_client(clients[client_idx].sock,buffer);
+                        }
+                     } else if (resultTurn == 0) {
+                        printf("ayoooooo\n");
+                        fflush(stdout);
+                        char* msg = findWinner(*game);
+                        strncpy(buffer, msg, BUF_SIZE);
+                        free(msg);
+                        for (int i = 0; i < 2; i++)
+                        {
+                           int client_idx = find_client_index_by_name(clients,actual,game->players[i]);
+                           write_client(clients[client_idx].sock,buffer);
+                           clients[i].isInGame = 0;
                         }
                      } else {
-                        strcpy(buffer, "Coup invalide !\n");
+                        char* msg = "Coup impossible, veuillez choisir un puit valide" ;
+                        strncpy(buffer, msg, BUF_SIZE);
                         write_client(clients[i].sock,buffer);
                      }
+
                   } else {
                      strcpy(buffer,"Pas ton tour\n");
                      write_client(clients[i].sock, buffer);
@@ -398,15 +420,18 @@ void display_list_games(Game *games, int actual_games, Client *clients, Client c
    write_client(client.sock,buffer);
 }
 
-int play_turn(char *buffer, Game  * game)
+int play_turn(char *buffer, Game * game)
 {
    int selectedHole = atoi(buffer);
+   int nextPossible = play(*game, selectedHole) ;
+   int nextMove = 1;
 
-   if (play(*game, selectedHole) == 0)
+   if (nextPossible == 0) 
    {
-      printf("choisir un puit valide\n");
-      fflush(stdout);
-      return 0;
+      nextMove = 0;
+   }
+   else if (nextPossible == 2) {
+      nextMove = 2;
    }
    else
    {
@@ -418,8 +443,44 @@ int play_turn(char *buffer, Game  * game)
       {
          game->turn = 0;
       }
+      
    }
-   return 1;
+
+   return nextMove;
+
+}
+
+char* findWinner(Game game) {
+
+   char* message = (char*)malloc(BUF_SIZE);
+   char winner[BUF_SIZE];
+   int highScore = 0;
+   int lowScore = 0;
+   printf("on y est\n");
+   fflush(stdout);
+
+   if (game.scores[0] > game.scores[1]) {
+      strncpy(winner, game.players[0], BUF_SIZE);
+      highScore = game.scores[0];
+      lowScore = game.scores[1];
+      snprintf(message, BUF_SIZE, "%s a gagné la partie.\n Score final : %d - %d\n\n\n Vous pouvez défier à nouveau un joueur en tapant : play <nom_joueur>\n", winner, highScore, lowScore);
+      printf("gagnant1\n");
+      fflush(stdout);
+
+   } else if (game.scores[0] < game.scores[1]) {
+      strncpy(winner, game.players[1], BUF_SIZE);
+      highScore = game.scores[1];
+      lowScore = game.scores[0];
+      snprintf(message, BUF_SIZE, "%s a gagné la partie.\n Score final : %d - %d\n\n\n Vous pouvez défier à nouveau un joueur en tapant : play <nom_joueur>\n", winner, highScore, lowScore);
+      printf("gagnant 2\n");
+      fflush(stdout);
+
+   } else {
+      snprintf(message, BUF_SIZE, "match nul, personne n'a gagné la partie\n\n\n Vous pouvez défier à nouveau un joueur en tapant : play <nom_joueur>\n");
+   }
+
+   return message;
+
 }
 
 int main(int argc, char **argv)
