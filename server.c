@@ -150,7 +150,7 @@ static void server_app(void)
                         write_client(clients[i].sock,buffer);
                      }
                   } else {
-                     strcpy(buffer,"Pas ton tour");
+                     strcpy(buffer,"Pas ton tour\n");
                      write_client(clients[i].sock, buffer);
                   }
                }
