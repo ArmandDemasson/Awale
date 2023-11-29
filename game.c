@@ -5,7 +5,7 @@
 #include <string.h>
 
 
-Game init_game(char ** players){
+Game init_game(char players[2][1024]){
 
     int **initial_board = (int **)malloc(2 * sizeof(int *));
     for (int i = 0; i < 2; i++) {
@@ -15,13 +15,9 @@ Game init_game(char ** players){
     //for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 6; j++) {
             initial_board[0][j] = 4;
-            initial_board[1][j] = 1;
+            initial_board[1][j] = 4;
         }
     //}
-
-    initial_board[0][5] = 0;
-    initial_board[1][1] = 0;
-
 
     int * initial_scores = malloc(2 * sizeof(int));
     initial_scores[0] = 0;
@@ -31,13 +27,17 @@ Game init_game(char ** players){
     // Initialisation de la structure Game
     Game game = {
         .board = initial_board,
-        .players = players,
         .scores = initial_scores,
         .turn = 0,
         .state = 1
     };
 
-    // ... faites quelque chose avec la structure Game ...
+    strncpy(game.players[0], players[0], sizeof(game.players[0]) - 1);
+    game.players[0][sizeof(game.players[0]) - 1] = '\0';
+    
+    strncpy(game.players[1], players[1], sizeof(game.players[1]) - 1);
+    game.players[1][sizeof(game.players[1]) - 1] = '\0';
+
     return game;
     // Libération de la mémoire allouée dynamiquement
 }

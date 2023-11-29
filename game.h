@@ -10,13 +10,13 @@
 
 typedef struct {
     int ** board;
-    char ** players;
+    char players[2][1024];
     int * scores;
     int turn;
     int state;
 } Game;
 
-extern Game init_game(char  ** players);
+extern Game init_game(char players[2][1024]);
 extern char * start_turn(Game game);
 int isPossiblePlay(Game game, int selectedHole);
 int willStarve(Game game);

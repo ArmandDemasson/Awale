@@ -105,8 +105,6 @@ static void server_app(void)
             strncpy(c.name, buffer, BUF_SIZE - 1);
             clients[actual] = c;
             actual++;
-            strncat(buffer, " vient de se connecter\n", sizeof(buffer) + strlen(buffer) - 1);
-            send_message_to_all_clients(clients, c, actual, buffer, 1);
             strcpy(buffer, "Vous pouvez entrer :\nlist : pour afficher la liste des joueurs connectés\nplay <nom_du_joueur> : pour défier un joueur\ngames : pour afficher la liste des parties");
             write_client(clients[actual - 1].sock, buffer);
          }
@@ -315,7 +313,6 @@ int find_client_index_by_name(Client *clients, int actual, const char *name)
 void challenge_client(char *buffer, Client *clients, int actual, int i, Server *server, Game *games)
 {
    // Le client a envoyé une demande de défi
-   Game game;
    char *spacePos = strchr(buffer, ' ');
    if (spacePos != NULL)
    {
@@ -329,7 +326,7 @@ void challenge_client(char *buffer, Client *clients, int actual, int i, Server *
          // Envoyer la demande de défi au client défié
          char challengeMsg[BUF_SIZE];
          strcpy(challengeMsg, clients[i].name);
-         snprintf(challengeMsg, BUF_SIZE, " vous a défié pour une partie. Acceptez-vous ? [Y/n]\n");
+         strcat(challengeMsg, " vous a défié pour une partie. Acceptez-vous ? [Y/n]\n");
 
          write_client(clients[challengedClientIndex].sock, challengeMsg);
 
@@ -341,9 +338,12 @@ void challenge_client(char *buffer, Client *clients, int actual, int i, Server *
             if (strncasecmp(response, "y", strlen("y")) == 0)
             {
 
-               char *players[2];
-               players[0] = clients[i].name;
-               players[1] = challengedClientName;
+               Game game;
+               char players[2][BUF_SIZE];
+               strncpy(players[0], clients[i].name, BUF_SIZE - 1);
+               players[0][BUF_SIZE - 1] = '\0';
+               strncpy(players[1], challengedClientName, BUF_SIZE - 1);
+               players[1][BUF_SIZE - 1] = '\0'; 
                game = init_game(players);
                if (server->actual_games < MAX_GAMES)
                {
