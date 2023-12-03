@@ -42,6 +42,7 @@ typedef struct
    char name[BUF_SIZE];
    int isInGame;
    int actualGame;
+   int isSpectator;
 }Client;
 
 typedef struct
@@ -65,6 +66,7 @@ static void send_message_to_all_clients(Client *clients, Client client, int actu
 static void remove_client(Client *clients, int to_remove, int *actual);
 static void clear_clients(Client *clients, int actual);
 void challenge_client(char * buffer, Client * clients, int actual, int i, Server * server, Game * games);
+int spectate_game(char *buffer, int actual, Client *clients, Server * server, int i, Game *games);
 static void display_list_clients(int actual, Client *clients, Client client);
 int play_turn(char *buffer, Game * game);
 char* findWinner(Game game);

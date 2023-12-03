@@ -102,12 +102,13 @@ static void server_app(void)
             Client c = {csock};
             c.isInGame = 0;
             c.actualGame = -1;
+            c.isSpectator = 1;
             strncpy(c.name, buffer, BUF_SIZE - 1);
             clients[actual] = c;
             actual++;
             strncat(buffer, " vient de se connecter\n", sizeof(buffer) + strlen(buffer) - 1);
             send_message_to_all_clients(clients, c, actual, buffer, 1);
-            strcpy(buffer, "Vous pouvez entrer :\nlist : pour afficher la liste des joueurs connectés\nplay <nom_du_joueur> : pour défier un joueur\ngames : pour afficher la liste des parties");
+            strcpy(buffer, "Vous pouvez entrer :\nlist : pour afficher la liste des joueurs connectés\nplay <nom_du_joueur> : pour défier un joueur\ngames : pour afficher la liste des parties\nspectate <nom_du_joueur> pour observer la partie d'un joueur");
             write_client(clients[actual - 1].sock, buffer);
          }
       }
@@ -138,24 +139,27 @@ static void server_app(void)
                   if (strcasecmp(clients[i].name, game->players[game->turn]) == 0)
                   {
                      int resultTurn = play_turn(buffer, game);
-                     printf("%d %d de tour lalala\n", game->turn, i);
-                     fflush(stdout);
-                     printf("%d resultTurn\n", resultTurn);
-                     fflush(stdout);
                      if(resultTurn == 1){; 
-
-                        printf("%d de tour esshhhs\n", game->turn);
-                        fflush(stdout);
-
                         strncpy(buffer, start_turn(*game), BUF_SIZE);
                         for (int i = 0; i < 2; i++)
                         {
                            int client_idx = find_client_index_by_name(clients,actual,game->players[i]);
                            write_client(clients[client_idx].sock,buffer);
+                          
+                        }
+                        printf("nb spec : %d\n", game->nbSpectate);
+                        fflush(stdout);
+                        if(game->nbSpectate > 0) {
+                           for (int i = 0; i < game->nbSpectate; i++) {
+                              printf("test avant write\n");
+                              fflush(stdout);
+                              int spectator_idx = find_client_index_by_name(clients,actual,game->spectators[i]);
+                              write_client(clients[spectator_idx].sock,buffer);
+                              printf("apres write\n");
+                              fflush(stdout);
+                           }
                         }
                      } else if (resultTurn == 0) {
-                        printf("ayoooooo\n");
-                        fflush(stdout);
                         char* msg = findWinner(*game);
                         strncpy(buffer, msg, BUF_SIZE);
                         free(msg);
@@ -165,6 +169,12 @@ static void server_app(void)
                            write_client(clients[client_idx].sock,buffer);
                            clients[i].isInGame = 0;
                         }
+                        if(game->nbSpectate > 0) {
+                           for (int i = 0; i < game->nbSpectate; i++) {
+                              int spectator_idx = find_client_index_by_name(clients,actual,game->spectators[i]);
+                              write_client(clients[spectator_idx].sock,buffer);
+                           }
+                        }
                      } else {
                         char* msg = "Coup impossible, veuillez choisir un puit valide" ;
                         strncpy(buffer, msg, BUF_SIZE);
@@ -172,8 +182,13 @@ static void server_app(void)
                      }
 
                   } else {
-                     strcpy(buffer,"Pas ton tour\n");
-                     write_client(clients[i].sock, buffer);
+                     if (clients[i].isSpectator == 1) {
+                        strcpy(buffer,"Tu es spectateur, tu ne peux pas jouer\n");
+                        write_client(clients[i].sock, buffer);
+                     } else {
+                        strcpy(buffer,"Pas ton tour\n");
+                        write_client(clients[i].sock, buffer);
+                     }
                   }
                }
                else
@@ -187,6 +202,12 @@ static void server_app(void)
                      challenge_client(buffer, clients, actual, i, &server, games);
                   } else if(strcmp(buffer, "games") == 0){
                      display_list_games(games, server.actual_games, clients, clients[i], server.actual_clients, buffer);
+                  }
+                  else if (strncmp(buffer, "spectate", strlen("spectate")) == 0) {
+                     int spec = spectate_game(buffer, actual, clients, &server, i, games);
+                     if(spec != -1) {
+                        addSpectate(games[spec], clients[i].name);
+                     };
                   }
                }
             }
@@ -312,6 +333,19 @@ int find_client_index_by_name(Client *clients, int actual, const char *name)
    return -1;
 }
 
+int find_game_index_by_clients_name(Game *games, Server *server, const char *name)
+{
+   int i;
+   for (i = 0; i < server->actual_games; i++)
+   {
+      if (strcmp(games[i].players[0], name) == 0 || strcmp(games[i].players[1], name) == 0)
+      {
+         return i;
+      }
+   }
+   return -1;
+}
+
 void challenge_client(char *buffer, Client *clients, int actual, int i, Server *server, Game *games)
 {
    // Le client a envoyé une demande de défi
@@ -344,12 +378,15 @@ void challenge_client(char *buffer, Client *clients, int actual, int i, Server *
                char *players[2];
                players[0] = clients[i].name;
                players[1] = challengedClientName;
-               game = init_game(players);
+               char *spectators[MAX_SPECTATE];
+               game = init_game(players, spectators);
                if (server->actual_games < MAX_GAMES)
                {
                   games[server->actual_games] = game;
                   clients[i].isInGame = 1;
                   clients[challengedClientIndex].isInGame = 1;
+                  clients[i].isSpectator = 0;
+                  clients[challengedClientIndex].isSpectator = 0;
                   clients[i].actualGame = server->actual_games;
                   clients[challengedClientIndex].actualGame = server->actual_games;
                   server->actual_games++;
@@ -481,6 +518,45 @@ char* findWinner(Game game) {
 
    return message;
 
+}
+
+int spectate_game(char *buffer, int actual, Client *clients, Server *server, int i, Game *games)
+{
+   int willSpectate = -1;
+   Game game;
+   char *spacePos = strchr(buffer, ' ');
+   if (spacePos != NULL)
+   {
+      char spectateClientName[BUF_SIZE];
+      snprintf(spectateClientName, BUF_SIZE, "%s", spacePos + 1);
+
+      int spectateClientIndex = find_client_index_by_name(clients, actual, spectateClientName);
+      if (spectateClientIndex != -1)
+      {
+
+         if(clients[i].isSpectator == 1) {
+
+            willSpectate = find_game_index_by_clients_name(games, server, spectateClientName);
+            clients[i].isInGame = 1;
+            char declineMsg[BUF_SIZE];
+            strcpy(declineMsg, "Vous observez une  partie\n");
+            write_client(clients[i].sock, declineMsg);
+         }
+         else {
+            char declineMsg[BUF_SIZE];
+            strcpy(declineMsg, "Vous ne pouvez pas observer une partie\n");
+            write_client(clients[i].sock, declineMsg);
+         }  
+        
+      }
+      else
+      {
+         char notPlayerMsg[BUF_SIZE];
+         snprintf(notPlayerMsg, BUF_SIZE, "Ce joueur n'existe pas.\n");
+         write_client(clients[i].sock, notPlayerMsg);
+      }
+   }
+   return willSpectate;
 }
 
 int main(int argc, char **argv)

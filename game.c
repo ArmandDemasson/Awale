@@ -5,7 +5,7 @@
 #include <string.h>
 
 
-Game init_game(char ** players){
+Game init_game(char ** players, char ** spectators){
 
     int **initial_board = (int **)malloc(2 * sizeof(int *));
     for (int i = 0; i < 2; i++) {
@@ -32,9 +32,12 @@ Game init_game(char ** players){
     Game game = {
         .board = initial_board,
         .players = players,
+        .spectators = spectators,
         .scores = initial_scores,
         .turn = 0,
-        .state = 1
+        .state = 1,
+        .nbSpectate = 0,
+
     };
 
     // ... faites quelque chose avec la structure Game ...
@@ -199,3 +202,14 @@ int play(Game game, int selectedHole){
     }
     return game.state;
 }
+
+void addSpectate(Game game, char* spectator) {
+    int i = 0;
+    while(game.spectators[i] != NULL) {
+        i++;
+    }
+    game.spectators[i] = spectator;
+    game.nbSpectate++;
+    return;
+}
+
