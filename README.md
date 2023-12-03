@@ -15,8 +15,8 @@ Fonctionnalitées implantées :
     taper list pour avoir la liste
 - affichage de la liste des parties
     taper games pour avoir la liste
-- chat entre 2 joueurs
 
-Fonctionnalitée pas finie (sur la branche addSpectate) :
+Fonctionnalitée pas finie (sur la branche addSpectate et chat_between_clients) :
 
 - possibilité d'être spectateur d'un joueur qui joue une partie
+- chat entre 2 joueurs
